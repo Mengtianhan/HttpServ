@@ -1,0 +1,498 @@
+<h3 align="center">第一讲  iostream</h3>
+<hr>
+<br>
+<h4>Hello C++</h4>
+最小的程序：
+<code>
+
+int main(){
+}
+
+</code>
+
+这个程序没有任何参数，什么也不做，但是不妨碍它是一个独立可运行的程序。
+每一个C++程序中必须有且只有一个名叫main的程序，可以没有可以带有参数，可以有int返回值可以没有返回值，不管怎么说，必须要有一个叫main的函数。
+通常我们看到的是这样。
+<code>
+
+int main(int argc, char *argv[]){
+	return 0;
+}
+
+</code>
+
+尽管如此，不妨碍我们常常这样
+<code>
+int main(){
+	return 0;
+}
+</code>
+
+如果我们打算使用命令行启动我们的程序而且还打算通过命令行带入参数的话比如：
+
+<code>
+
+//
+// 使用命令行，带一个文件启动XXX.exe
+//
+XXX.exe input.txt
+
+
+</code>
+
+这时候我们就要考虑使用上面带参数的那种写法啦。如果没有这方面的需求那么可以简单一些，当然有些集成环境会自动为我们生成第一种带参数的main函数，那样当然最好，比如Qt，比如VS如果创建的不是空白程序的话也是自动生成的。
+
+没有任何输出的程序是没有意义的，不论他有多小，所以我们从最简单的开始
+<code>
+#include <iostream>
+int main(){
+	std::cout<<"Hello C++"<<std::endl;
+}
+</code>
+
+#include <iostream> 这一句旨在告诉编译器去包含位于iostream里面的标准流I/O功能的声明，如果没有这些声明，那么下面代码
+<code>
+
+std::cout<<"Hello C++"<<std::endl;
+
+</code>
+将无法通过编译。
+在C++里，如果我们想要引入在其他文件中定义的类型，那么就需要使用#include 指令去包含相应的文件。
+关于在#include后面的包含文件到底使用""还是尖括号，这个一般的原则是：当引用的文件在引用目录中那么使用尖括号，否则使用双引号，比如：
+
+<code>
+
+#include <string>   // 包含的是标准库中的string
+#include "mystring.h" // 引入的是我们一个在当前工作目录下的mystring.h文件
+
+</code>
+
+现在重新回到小程序上面，当程序被运行时，会打在黑乎乎的窗口上打印:Hello C++。但是有可能程序一闪而过而导致没法看到上面打印些什么，这时候可以使用system("pause")让程序暂停下来。
+<code>
+
+#include <iostream>
+int main(){
+	std::cout<<"Hello C++"<<std::endl;
+	system("pause");
+}
+
+std::cout 是一个ostream的对象。
+<< 是流操作符。
+"Hello C++" 双引号引起来说明是一个字符串，所以在这里会被解释成const char*
+那么std::cout<<"Hello C++"可以这么来解释这句话，将字符串"Hello C++"流进std::cout中，那么std::cout的目的地是哪里呢？
+我们看到了，是黑乎乎的屏幕——控制台。
+那么"Hello C++"之后又连接一个流操作符，这是那样？难道说是将std::endl流到字符串"Hello C++"中吗？
+答案是否定的。因为程序是从左到右执行的，所以当std::cout<<"Hello C++"的时候将有诸如下面的函数被执行:
+
+std::ostream& operator<<(std::ostream& os,const char* msg){
+	os.write(msg,strlen(msg);
+	return os;
+}
+
+当然被执行的函数不一定是这样的，或许以其他方式实现，但是不用太过关心过程，我们只需要知道这个函数的原形，因为这个原形很直接的告诉了我们：一流流程操作了一个对象之后还是他自己。所以在后面的<<std::endl;还是流到std::cout中……
+嗯，等等，std::endl是什么呢？为什么是它流到std::cout中，而不是它操作了std::cout呢？
+答案是后者，并非是std::endl流到std::cout中，因为std::endl其实是一个函数指针。这个函数大致如下：
+
+std::ostream& endl(std::ostrem& os){
+	os<<"\n";
+	os.flush();
+	return os;
+}
+
+看到这里是不是觉得C++很有趣呢？那么问题来了，std::endl又是如何与流操作符联系上的呢？坚决方式有很多，这里我们简单的说一种方式：
+
+typedef std::function<std::ostream&(std::ostream&)> streamoperationtype;
+std::ostream& operator<<(std::ostream& os,streamoperationtype fun){
+	return fun(os);
+}
+
+当然这里的实现可不是标准，因为std::function是C++11引入的，所以标准库的实现方式自然不会是我们这种方式，这里只是作为一个编程思想的切入点。
+
+</code>
+
+关于标准输出是不是只有std::cout呢？当然不是了，在C++里面常用的还有一个同样可以让控制台上打印的流对象——std::cerr。顾名思义，这是在打印错误信息的时候使用的，那么为什么不是std::cout打印错误信息而是std::cerr呢？当然这是没有强求的，只是因为std::cout是带有缓冲，而std::cerr不带缓冲，所以当程序出错的时候都希望能够尽快看到错误信息，所以使用无缓冲的std::cerr。
+
+只有输出没有输入是不是显得太过枯燥了些呢？当然C++自然也是可以有输入的，std::cin便是用来输入的,下面我们来看一个稍微复杂一点的程序：
+
+<code>
+
+#include <iostream>
+int main(){
+	int num;
+	std::cin>>num;
+	std:cout<<"你输入了一个数:"<<num<<std::endl;
+	system("pause");
+}
+
+</code>
+
+其实改程序和上面很小的程序一样简单，但是却提供了些有趣的操作——我们可以打印我们想要打印的数了。（好像没什么卵用）
+这是学习编程过程中很重要的一步，不管是什么语言，上手的第一件事就要知道如何往控制台上输入和输出，因为这将决定是否能够愉快的玩下去。
+
+cin是istream的对象，简单点说就是将你给他的东西存放到你想放的地方的一个对象。
+
+<code>
+
+当然cin的操作和cout的几乎是一样的，一样的简单粗暴，当我们想要把数据扔给cout时直接使用<<即可。
+而当我们想要从cin中索取数据时直接使用>>即可。
+
+如果结合<<和>>两个操作符来理解isteam和ostream的话是不是一下子觉得很简单呢？可以把<<和>>当成是小水管，把cout和cin当成是水池，而我们的数据可以理解为水，<<表示我们将水流到水池中，而>>测试表示我们从水池中取水。
+
+#include <iostream>
+#include <string>
+int main(){
+	std::string str;
+	std::cin>>str;
+	std::cout<<str<<std::endl;
+	system("pause");
+}
+
+运行程序并在屏幕上输入
+asada asda asd
+
+然后我们可以看到屏幕只输出：
+asada
+
+</code>
+
+这是为什么呢？答案很简单，cin虽然能够把水池里面的水全部流出来，但是当遇到障碍物(空格)之后他就隔断了，虽然水池里还有水，但是需要把这个障碍物拿开才能够继续流出，所以当我们接收完成一段之后我们可以继续接收，小水池依然还有水流出。
+
+嗯……这或许不是我们想要的结果，至少某些时候我们需要能够输入一整行。所以这时候我们可以使用辅助函数getline
+
+<code>
+
+#include <iostream>
+#include <string>
+int main(){
+	std::string str;
+	std::getline(std::cin,str);
+	std::cout<<str<<std::endl;
+	system("pause");
+}
+
+</code>
+
+再运行程序我们便可以输入一整行啦。
+
+<h4>iostream</h4>
+iostream声明得有几个标准流对象，下面是vs中的iostream声明的几个流对象，w开头的是针对unicode字符的流对象，常用的是cin和cout以及cerr，至于clog是用于输出日志的，它写的目的地和cerr一样都是stderr。
+
+<code>
+__PURE_APPDOMAIN_GLOBAL extern _CRTDATA2 istream cin, *_Ptr_cin;
+__PURE_APPDOMAIN_GLOBAL extern _CRTDATA2 ostream cout, *_Ptr_cout;
+__PURE_APPDOMAIN_GLOBAL extern _CRTDATA2 ostream cerr, *_Ptr_cerr;
+__PURE_APPDOMAIN_GLOBAL extern _CRTDATA2 ostream clog, *_Ptr_clog;
+
+__PURE_APPDOMAIN_GLOBAL extern _CRTDATA2 wistream wcin, *_Ptr_wcin;
+__PURE_APPDOMAIN_GLOBAL extern _CRTDATA2 wostream wcout, *_Ptr_wcout;
+__PURE_APPDOMAIN_GLOBAL extern _CRTDATA2 wostream wcerr, *_Ptr_wcerr;
+__PURE_APPDOMAIN_GLOBAL extern _CRTDATA2 wostream wclog, *_Ptr_wclog;
+</code>
+
+在ostream里面定义了处理内部信息的输出操作符:
+
+<code>
+...
+
+ostream& operator<<(short);
+ostream& operator<<(int);
+ostream& operator<<(long);
+ostream& operator<<(long long);
+
+ostream& operator<<(unsigned short);
+ostream& operator<<(unsigned int);
+ostream& operator<<(unsigned long);
+ostream& operator<<(unsigned long long);
+
+ostream& operator<<(float);
+ostream& operator<<(double);
+ostream& operator<<(long double);
+
+ostream& operator<<(bool);
+ostream& operator<<(const void*);
+ostream& put(char);
+ostream& write(const char*,streamsize);
+...
+</code>
+
+我们看到里面缺少了对char的操作符，但是put和write可以简单地写出字符，所以就没必要实现一个流操作符（这是C++之父所说，因为标准就是这么定义），可以通过全局函数来实现：
+
+<code>
+
+ostream& operator<<(ostream& os,char ch){
+	os.put(ch);
+	return os;
+}
+
+ostream& operator<<(ostream& os,const char* msg){
+	os.write(msg,strlen(msg));
+	return os;
+}
+
+</code>
+
+write可以将一段buffer写到指定地方，所以换句话说，write除了写字符串之外还能够将数据按照二进制的放写进文件储存起来。
+
+<code>
+
+int main(){
+	char A('A');
+	cout<<"A = "<<A<<" = "<<int(A)<<endl;
+}
+
+输出结果:
+
+A = A = 65;
+
+</code>
+
+从这个例子我们大概知道为什么标准里面没有直接定义有char的操作符而是直接提供put成员函数的原因了。
+
+<code>
+
+int main(){
+	cout<<true<<"\t"<<false<<endl;
+}
+
+输出结果：
+1	0
+
+</code>
+
+在默认情况下对bool的输出是0和1，true是1，false是0，那么我们可不可以希望他输出的是true和false，当然可以：
+
+<code>
+#include <iostream>
+#include <iomanip>
+
+int main(){
+	cout<<true<<"\t"<<false<<endl;
+	cout<<boolalpha;
+	cout<<true<<"\t"<<false<<endl;
+}
+
+输出结果:
+1 	0;
+true	false;
+
+</code>
+
+boolalpha 在iomanip中定义，当使用他之后所有的bool类型操作将按照字符形式打印。
+
+<code>
+
+ostream& operator<<(const void*);
+
+该成员函数的存在让我们打印指针成了可能，很多时候我们确实很需要打印指针,当我们需要追踪一个对象的时候
+
+int main(){
+	int* ptr = new int(10);
+	cout<<&p<<"\t"<<p<<endl;
+}
+	
+输出结果:
+
+0x7788ff45	0x7895f2ff
+
+</code>
+
+以上我们见识了标准流打印内置类型的方法，那么自定义的类型又如何使用标准流来打印呢？比如说：
+
+<code>
+
+class MInt{
+public:
+	MInt(int val):mVal(val){}
+	MInt(const MInt& other):mVal(other.mVal){}
+private:
+	int mVal;
+};
+
+int main(){
+	MInt a(10);
+	cout<<a<<endl;
+}
+
+</code>
+
+上面的程序没法通过编译，因为cout无法对MInt操作。
+cout同样没有对char实现流操作符，但是却提供了一个全局函数来操作char，让char如同其他内置类型一样可以使用流操作，这是一个思路，当然也是规则，重载流操作符的形式必须如下：
+
+<code>
+
+
+ostream& operator<<(ostream& os,const T& other);
+
+T 是就是要操作的类型，针对上面的MInt，可以如下：
+
+ostream& operator<<(ostream& os,const MInt& other){
+	os<<other.mVal;
+	return os;
+}
+
+现在又一个问题来了，mVal是MInt的私有变量，所以是不能直接访问的，但是除此之外又没他发，当然可以给MInt提供一个接口让他返回mVal，不过除此之外还是有其他办法的——友元函数。
+
+class MInt{
+public:
+	MInt(int val):mVal(val){}
+	MInt(const MInt& other):mVal(other.mVal){}
+	friend ostream& operator<<(ostream& os,const MInt& other);
+private:
+	int mVal;
+};
+
+int main(){
+	MInt a(10);
+	cout<<a<<endl;
+}
+
+现在一切ok，可以看到想象中的结果：
+
+10
+
+</code>
+
+和ostream一样，istream同样针对内置类型都实现输入流操作符。
+
+<code>
+...
+
+istream& operator>>(short&);
+istream& operator>>(int&);
+istream& operator>>(long&);
+istream& operator>>(long long&);
+
+istream& operator>>(unsigned short&);
+istream& operator>>(unsigned int&);
+istream& operator>>(unsigned long&);
+istream& operator>>(unsigned long long&);
+
+istream& operator>>(float&);
+istream& operator>>(double&);
+istream& operator>>(long double&);
+
+istream& operator>>(bool&);
+istream& operator>>(void*&);
+istream& get(char);
+...
+</code>
+
+想要通过cin来初始化对象，我们只需要实现相应的函数即可，而这个函数的样子如下：
+
+<code>
+
+template<class T>
+istream& operator>>(T& val);
+
+</code>
+
+但是很多时候我们不能这样写，为什么呢？回顾上面我们说过的ostream，或者简单点总结一下：如果我们想要用一个对象去操作另一个对象，那么该样式如下：
+
+</code>
+
+template<class T,class A,class B>
+T op(A a B b);
+
+</code>
+
+这个函数的意义我们可以简单的理解为A使用op操作B返回T，按照这个思想我们来看看下面的声明表示的意义：
+
+<code>
+
+template<class T>
+T operator+(const T& left,const T& right); // 表示 T res = left + right;
+
+template<class T>
+T operator-(const T& left,const T& right); // 表示 T res = left - right;
+
+
+template<class T>
+T operator*(const T& left,const T& right); // 表示 T res = left*right;
+
+template<class T>
+T operator/(const T& left,const T& right); // 表示 T res = left/right;
+
+....
+
+</code>
+
+现在我们回头来看看让cin使用>>来操作我们的对象，cin对应的是上面我们的left，而我们自己的对象就是上面对应的right，而返回的对象依然还是cin，所以要实现这个功能我们只需要实现诸如下面类型的函数：
+
+<code>
+
+template<class T>
+istream& operator>>(istream& is,T& res);
+
+// 此处 T 表示我们想要表达的类型，当然都是一些复合类型，但是复合类型是由简单类型组合而成，所以我们在具体实现的时候只要针对复合类型的数据成员进行cin即可，比如：
+
+class MInt{
+public:
+	MInt(int val = 0):mVal(val){}
+	MInt(const MInt& other):mVal(other.mVal){}
+	friend ostream& operator<<(ostream& os,const MInt& other){
+		os<<other.mVal;
+	}
+	friend istream& operator>>(istream& is,MInt& out){
+		is>>out.mVal;
+		return is;
+	}
+
+	friend MInt operator+(const MInt& left,const MInt& right){
+		return MInt(left.mVal + right.mVal);
+	}
+
+	friend MInt operator-(const MInt& left,const MInt& right){
+		return MInt(left.mVal - right.mVal);
+	}
+
+	friend MInt operator*(const MInt& left,const MInt& right){
+		return MInt(left.mVal*right.mVal);
+	}
+
+	friend MInt operator/(const MInt& left,const MInt& right){
+		return MInt(left.mVal/right.mVal);
+	}
+private:
+	int mVal;
+};
+
+int main(){
+	MInt a;
+	cin>>a;
+	cout<<a<<endl;
+
+	MInt b = 10;
+
+	MInt c = a + b;
+
+	MInt d = c*a;
+
+	MInt e = d/c;
+
+	cout<<b<<endl<<c<<endl<<d<<endl<<e<<endl;
+	
+	return 0;
+}
+	
+</code>
+
+
+<h4>总结</h4>
+这一讲虽然在说iostream，但是内容却不局限于iostream，和其他的C++书籍比起，我们可能比较超前了些，不过我觉得以这样的方式开局应该是不错的，我属于这样的人，在接触到一门语言的时候首先考虑的是如何快如的建立交互，所以第一讲的时候我们边开始思考流操作符重载这些问题，当然这些操作符重载是C++所必须的知识点，但又是一个难点，所以这些内容还是不太适用于从没接触过编程的初学者，因为我们并没有像教科书一般从基本类型开始，因为我的假设是当阅读本章知识的时候您至少知道C或者C++的基本类型。
+这一讲的知识要点：操作符重载：
+
+<code>
+
+operator+,+号操作符重载。
+operatror-,-号操作符重载
+operator*，乘号操作符重载
+operator/,除号操作符重载
+operator<<，输入流操作符重载
+operator>>，输入流操作符重载
+
+</code>
+
+关于操作符的重载后续我们会继续深入。
+
+
+

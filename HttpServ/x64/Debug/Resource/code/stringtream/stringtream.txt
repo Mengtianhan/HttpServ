@@ -1,0 +1,80 @@
+<h3 align="center">第二讲  stringstream</h3>
+<hr>
+<br>
+和iostream比起，stringstream显得有些陌生，相信可能有很多人接触C++很长一段时间却没有正面的接触stringstream，那么我们为什么要在这开始阶段来解读stringstream这个偏门的东西呢？因为这是在为我们后面的串作准备。
+那么stringstream是什么呢？它的作用又是什么？带着这两个问题我们回顾一下iostream。
+iostream是io流，简单点说就是将数据写入io或者从io中读出，所以，stringstream我们便可以这么理解：将数据写入string，或者从string中读取数据。
+所以，stringstream的一个重要的用途便是用来作类型转换：
+
+<code>
+//
+// 将数字类型转换为string
+//
+string double_to_string(double val)
+{
+	istringstream is;
+	is<<val;
+	return is.str();
+}
+
+int main(){
+	string str = double_to_string(1000.0);
+	cout<<str<<endl;
+	return 0;
+}
+
+</code>
+
+同样我们可以将其他基础类型转换为string，那么反过来，我们是不是可以将string转换为其他类型呢？当然可以：
+
+<code>
+
+double string_to_double(const std::string& str)
+	ostringstream os(str);
+	double val;
+	os>>val;
+	return val;
+}
+
+int main(){
+	string str("100.56");
+	double val = string_to_double(str);
+	cout<<val<<endl;
+	return 0;
+}
+
+</code>
+
+在这两个例子上我们可以进一步写出一个类型转换的函数：
+
+<code>
+
+template<class L,class R>
+bool convert(L& val,const R& right)
+{
+	stringstream os;
+	if(!(os<<right))
+		return false;
+	return os>>val;
+}
+
+int main(){
+	const char* ch = "100.568";
+	doubel val;
+	if(convert(val,ch)){
+		cout<<val<<endl;
+	}
+	else{
+		cout<<"convert failed"<<endl;
+	}
+	return 0;
+}
+
+</code>
+
+这个转换函数在正常情况下都能够使用，但是效率不行，当然这些都不是问题，因为接下来的模板能够解决这个问题，但不是现在，现在我们只需要知道stringstream的作用即可。
+
+
+
+
+

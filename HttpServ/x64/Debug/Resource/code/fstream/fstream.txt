@@ -1,0 +1,180 @@
+<h3 align="center">第三讲  fstream</h3>
+<hr>
+<br>
+说起io流，目前我们介绍了两个：iostream，stringstream，用得最多的是iostream，stringstream通常用于一些特殊的场合，比如类型的转换。这一讲我们来看看第三个io流——fstream。
+和stringstream比起，fstream更像iostream，好吧，他们都是iosteam的派生类，但是他们又没啥关系。他和stringstream的最大区别就是一个写进字符串（或者从字符串中读取），一个写进文件（或从文件中读取）。所以很多时候我们可能不会很关心怎么写进字符串，但却很关心文件的读写。而fstream就是为了完成这事的。
+fstream和iostream一样，对应的写文件的是ofstream，而读文件的是ifstream，使用fstream来读写文件相对于C语言的FILE要简单得多，至少我目前觉得没有比这更加简洁的了，所以在C++里面只要理解了fstream就可以不用去管他们的关于文件的读写的方法了，比如我使用Qt，但是我从不用QFile，因为fstream本身就已经足够简洁啦。
+对于ofstream和ifstream的使用之所以说很简单，是因为通常我们只需要在构造对象的时候给他指定文件就好，对于写文件来说，我们使用ofstream:
+
+std::ofstream outFile("test.txt",std::ios::app); 这句话的意思是创建一个文件流对象，该对象关联的文件是test.txt，如果该文件存在那么将信息追加在文件后面，如果文件不存在，那么创建文件。
+
+等到outFile之后所有你可以操作std::cout的操作都能够拿来操作outFile，比如定点输出，比如本地化这些都是可以的。
+
+那么是什么觉得流操作文件的行为呢？那就是第二参数，该参数指定了打开文件的方式，此时我们使用的std::ios::app。app顾名思义就是append，也就是追加的意思啦，当然如果不指定这个参数，那么默认的参数便是std::ios::out，什么意思呢？就是输出的意思了，当指定为out时，每一次打开文件的时候（构造函数中如果指定了文件，便打开了文件），都会将文件的内容清空，如果文件不存在，则创建相应的文件。
+
+对于打开模式的有如下的选项：
+<code>
+</code>
+
+static const _Openmode in = (_Openmode)0x01;   // 为读而打开文件
+static const _Openmode out = (_Openmode)0x02;  // 为写而打开
+static const _Openmode ate = (_Openmode)0x04;  // 打开并找到文件的结尾
+static const _Openmode app = (_Openmode)0x08;   // 追加
+static const _Openmode trunc = (_Openmode)0x10; // 将文件截断到0长度
+static const _Openmode binary = (_Openmode)_IOSbinary; // 二进制 可以和in out等配合使用
+
+<code>
+
+如果对于我们要操作的文件如果不指定binary的话，那么都是以文本的形式操作，如果我们需要操作的是二进制文件，我们应该特别指出：
+std::ofstream outFile("test.txt",std::ios::app | std::ios::binary);
+此时的outFile将是以二进制的形式打开文件并追加信息。对于二进制的读写我们不能使用流操作符，我们需要使用read/write
+
+<code>
+// 源.cpp
+#include <string>
+#include <fstream>
+
+int main(){
+	
+	std::ifstream inFile("源.cpp");
+
+	std::string  str((std::istream_iterator<char>(inFile)), std::istream_iterator<char>());
+
+	inFile.close();
+
+	std::ofstream outFile("test.txt");
+
+
+	outFile<<str<<std::endl;
+
+	outFile.close();
+
+	return 0;
+}
+
+</code>
+
+当我们执行这段程序的时候我们会在当前的工作目录发现多了一个叫test.txt的文件，而文件里面的内容和我们cpp的文件一毛一样。因为我们先读取cpp文件中的内容，然后将内容写到test.txt文件中。
+
+下面来看看二进制文件的读写:
+
+<code>
+
+// 源.cpp
+#include <string>
+#include <fstream>
+
+int main(){
+	
+	std::ofstream outFile("test.dat",std::ios::binary | std::ios::out);
+
+	int a = 10;
+	double b = 1000.0;
+	__int64 c = 1e10;
+	
+	outFile.write((char*)(&a),sizeof(a));
+	outFile.write((char*)(&b),sizeof(b));
+	outFile.write((char*)(&c),sizeof(c));
+
+	outFile.close();
+
+	//
+	// 现在读取
+	//
+
+	std::ifstream inFile("test.dat",std::ios::in | std::ios::binary);
+	
+	a = 0;
+	b = 0;
+	c = 0;
+
+	inFile.read((char*)(&a),sizeof(a));
+	inFile.read((char*)(&b),sizeof(b));
+	inFile.read((char*)(&c),sizeof(c));
+
+	inFile.close();
+
+	std::cout<<a<<std::endl<<b<<std::endl<<c<<std::endl;
+
+	return 0;
+}
+
+</code>
+
+
+运行这段代码，我们可以打开文件查看一下文件里面的内容，好吧，真心不认识里面写的什么鬼，但是我们可以读取出来，这就足够了。
+
+最后，必须一说的事，对于文件的读写，我们应该总是检查文件是否打开成功，对于读取的文件不但要检查是否打开成功，还需要检查我们是否已经到文件结尾，至于定位文件的位置，那就不是必须的啦，但是很多情况是需要考虑的。
+
+<code>
+// 源.cpp
+#include <iostream>
+#include <string>
+#include <fstream>
+
+int main(){
+
+	std::ofstream outFile("test.txt");
+	if(outFile.fail())
+		return 0;
+
+	outFile<<1<<2<<3<<4<<5<<std::endl;
+
+	outFile.close();
+
+	std::ifstream inFile;
+	inFile.open("test.txt");
+	if(inFile.fail()){
+		return 0;
+	}
+	int res = 0;
+	while(inFile.eof() == false){
+		inFile>>res;
+		std::cout<<res<<std::endl;
+	}
+	inFile.close();
+	return 0;
+}
+</code>
+
+执行该段代码我们会发现12345被写进文件test.txt，但是我们一下子就读出来，然后结束读取。
+那么我们想12345分开读取怎么办呢？其实很简单的，只要写的时候将他们使用空格分开即可。如同我们第一讲里面所说的istream的流操作符遇到空白出结束当前读取，所以只要写的时候带至少一个空格来分开即可，回车也是可以的哦。那么如果我们想要读取一行怎么办？很简单，getline即使读取一行的。
+
+<code>
+// 源.cpp
+#include <iostream>
+#include <fstream>
+#include <string>
+
+int main(){
+
+	std::ofstream outFile("test.txt");
+	if(outFile.fail())
+		return 0;
+
+	outFile<<"hello\n"<<"Word\n"<<"Nihao\n"<<"nishishui\n"<<"Hehe"<<std::endl;
+
+	outFile.close();
+
+	std::ifstream inFile;
+	inFile.open("test.txt"); // 除了在构造对象之时打开文件外，还可以使用open函数来打开文件，当文件关闭后还可以使用open打开其他文件
+	if(inFile.fail()){
+		return 0;
+	}
+
+	std::string str = "";
+	while(inFile.eof() == false){
+		std::getline(inFile,str,'\n');
+		std::cout<<str<<std::endl;
+	}
+	inFile.close();
+	return 0;
+}
+
+</code>
+
+执行该段代码，我们可以看到文本被一行一行的读取。
+
+
+掌握fstream，轻松玩转文件操作，对于读取很大很大的文件时，我们后面会说文件映射，这里就先说这些。
+

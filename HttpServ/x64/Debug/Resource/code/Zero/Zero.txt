@@ -1,0 +1,259 @@
+<h3 align="center">第零讲  写在开篇</h3>
+<hr>
+<br>
+<h4>什么是C++</h4>
+C++是一种通用程序设计语言，它
+——是带类的C。
+——如同Java、C#一样支持面向对象程序设计。
+——支持数据抽象。
+——支持通用程序设计。
+<h4>带类的C</h4>
+从C语言转过的人会认为和C比起C++可能更加麻烦了些更复杂一些，但是习惯C++的人会认为C++是更好的C，它是带类的C，它继承了C的所有特性，同时还提供了C++仅有的新特性，比如动态类型检查，构造函数对资源的初始化，析构函数对资源的释放，操作符的重载等等。
+当然某些时候C++的效率不会因为class的引入而带有负面的开销。比如：
+<code>
+
+void sortc(void *base, size_t nmemb, int (*cmpfcn)(const void*, const void*));
+
+//
+// 这是C语言典型的排序函数，他通过一个函数地址来对数组进行排序
+// 可以说他的效率很高，那么我们可以看看C++的排序函数应该什么样的呢？
+//
+
+template<class T,class Fun>
+void sort(T* beg,T* end,Fun fun);
+
+</code>
+看上去C++的写法确实是要比C语言的写法复杂了不少，而且如果要很好的理解这个C++的写法，那么我们可能不是随便看看C++的语法就能够明白的，所以从这个角度来说C语言简单直接，当然如果我们对这个写法理解之后那么我们又可以看到另一道不同的风景，比如：
+<code>
+struct cmp : public std::binary_function<int,int,bool>
+{
+	bool operator()(int a,int b){
+		return a<b;
+	}
+};
+
+int a[10];
+
+//
+// TODO
+//
+
+sort(a,a+10,cmp());
+
+//
+// 下面我们来看一个C的
+//
+bool cmpc(int* a,int* b)
+{
+	return *a < *b;
+}
+
+int b[10];
+
+//
+// TODO
+//
+sort(a,10,cmpc);
+
+</code>
+
+不管怎么看C语言的排序方式简单直接，很好理解，而且从C语言的角度来说效率相当的好，但是这里可以很确定的说，如果只谈效率，C++版本的sort效率却要比C语言版本的高出很多？为什么呢？
+
+<h4>过程试程序设计</h4>
+如同C语言，C++一样支持过程试程序设计：
+1.将程序分解成多个过程。
+2.使用最好的算法来实现每个过程。
+3.组合过程。
+<code>
+double power(double val)
+{
+	return val*val;
+}
+
+void f()
+{
+	double val;
+	std::cin>>val;
+	val = power(val);
+	std::cout<<val<<std::endl;
+}
+
+int main()
+{
+	f();
+	system("pause");
+	return 0;
+}
+</code>
+这是一个过程试程序的设计的例子。
+<h4>模块化程序设计</h4>
+将程序分解为多个模块，将数据隐藏于模块背后，将模块组合成我们的程序，让模块尽可能通用和复用。
+<h4>一个例子</h4>
+我们以一个简单的开启我们的C++之旅。这个例子很简单，它就是我们的服务器，那么问题来了，我们为什么要用C++写服务器呢？答案很简单，谁让我们这里主要聊C++呢？
+按照程序设计模式来说，这个服务器中我们即使用了过程试设计方案，同时也使用了模块化设计。
+网络通信，TCP服务我们使用的是模块，我们将socket的细节封装在AsioNetCom模块之中，而将http的协议解析和处理放在一个httpFunction函数中，如果我们想要修改http协议的处理我们可以随时对该函数进行修改。当然我们目前并没有将数据库考虑进去。
+<code>
+#include <MString.h>
+#include <vector>
+#include <HPath_File.h>
+#include <IAsioInterface.h>
+#include <IFileSystem.h>
+#include <IFileMap.h>
+
+std::shared_ptr<IFileMap> pFileMap{ nullptr };
+std::shared_ptr<IFileSystem>  pFileSystem{ nullptr };
+
+void httpFunction(const char* msg, __int64 len, const char* clientid, std::shared_ptr<IServiceNet> __Serv);
+
+int main(){
+	INITCOM;
+	pFileSystem = SharedComPtr(CreateFileSystem());
+	pFileMap = SharedComPtr(CreateFileMap());
+	std::shared_ptr<IServiceNet> pServ = SharedComPtr(CreateServiceNet());
+	if (!pFileSystem || !pFileMap || !pServ){
+		return 0;
+	}
+
+	pServ->Run();
+	pServ->BindMsgFun(std::bind(httpFunction,
+		std::placeholders::_1,
+		std::placeholders::_2,
+		std::placeholders::_3,
+		pServ));
+	pServ->SetListenPort(12000);
+	pServ->StartListen();	
+	while (1)
+		Sleep(10000000);
+	return 0;
+}
+
+</code>
+
+因为我们的网络服务模块都拆分到IAsioNetCom模块中，所以对于网络服务的开启这一块相当的简单，而对http协议的解析和处理我们放在httpFunction函数里面进行处理，这是一个异步回调函数，所以从这个角度来看，这是一个实实在在的过程试程序。
+<code>
+void httpFunction(const char* msg, __int64 len, const char* clientid, std::shared_ptr<IServiceNet> __Serv){
+
+	mj::MString str(msg,msg+len);
+	std::vector<mj::MString> __Vstr;
+	str.split("\n", __Vstr);
+	std::cout << str << std::endl;
+	if (__Vstr.empty())
+		return;
+
+	mj::MString __Accept;
+	mj::MString __Head;
+	for (auto s : __Vstr){
+		if (s.istart_with("Accept:")){
+			__Accept = s;
+		}
+		if (s.istart_with("get") || s.istart_with("post")){
+			__Head = s;
+		}
+	}
+	
+	if (__Accept.empty() || __Head.empty())
+		return;
+
+	std::vector<mj::MString> __Get;
+	unsigned pos = __Head.find_first("/");
+	if (pos == -1)
+		return;
+
+	unsigned pos2 = __Head.find(" ", pos);
+	if (pos2 == -1)
+		return;
+	mj::MString url = __Head.copy(pos+1, pos2);
+	url.trim();
+
+	static mj::MString headStr;
+	headStr = "HTTP/1.1 200 OK\r\nServer: Microsoft-IIS/7.5\r\n";
+	headStr += file::getCurrentTimeStr();
+	headStr += "\r\nConnection: Keep-Alive\r\nContent-Type: text/html\r\n";
+
+	if (url.empty()){
+		static mj::MString homeStr;
+		static mj::MString strForC;
+		homeStr.fromFile("home.html");
+		strForC.fromFile("Resource/code/README.txt");
+		homeStr.replace_all("ReplcaedC", strForC);
+		strForC.fromFile("Resource/Other/README.txt");
+		homeStr.replace_all("ReplcedXiaoShuode", strForC);
+		headStr += "Content-Length:" + std::to_string(homeStr.length()) + "\r\n\r\n";
+		headStr += homeStr;
+		__Serv->PostSend(headStr.c_str(), headStr.length(), clientid);
+	}
+	else{
+		if (url.iend_with(".jpg") || url.iend_with(".bmp") || url.iend_with(".gif")){
+			if (file::fileisexist(url)){
+				file::_Path p(url.toStdString());
+				mj::MString extension = p.extension();
+
+				static mj::MString picStr;
+				picStr.fromFile(url, 0);
+				headStr = "HTTP/1.1 200 OK\r\nServer: Microsoft-IIS/7.5\r\n";
+				headStr += file::getCurrentTimeStr();
+				headStr += "\r\nConnection: Keep-Alive\r\nContent-Type: image/";
+				headStr += extension + "\r\n";
+				headStr += "Content-Length:" + std::to_string(picStr.length()) + "\r\n\r\n";
+				__Serv->PostSend(headStr.c_str(), headStr.length(), clientid);
+				__Serv->PostSend(picStr.c_str(), picStr.length(), clientid);
+			}
+		}
+		else if (url.iend_with(".rar")){
+			if (pFileSystem->MFileIsExist(url)){
+				file::_Path p(url.toStdString());
+				mj::MString extension = p.extension();
+				static mj::MString picStr;
+				picStr.fromFile(url, 0);
+				headStr = "HTTP/1.1 200 OK\r\nServer: Microsoft-IIS/7.5\r\n";
+				headStr += file::getCurrentTimeStr();
+				headStr += "\r\nConnection: Keep-Alive\r\nContent-Type: image/";
+				headStr += extension + "\r\n";
+				headStr += "Content-Length:" + std::to_string(picStr.length()) + "\r\n\r\n";
+				__Serv->PostSend(headStr.c_str(), headStr.length(), clientid);
+				int len = picStr.length();
+				if (len > 8 * 1024 * 1024){
+					mj::MBuffer buffer;
+					picStr.Buffer(buffer);
+					int pos = 0;
+					while (len < 8 * 1024 * 1024){
+						__Serv->PostSend(buffer.mBuffer + pos, 8*1024*1024, clientid);
+						len -= 8 * 1024 * 1024;
+						pos += 8 * 1024 * 1024;
+					}
+					__Serv->PostSend(buffer.mBuffer + pos, len, clientid);
+					mj::MString::FreeBuffer(buffer);
+				}
+				else{
+					__Serv->PostSend(picStr.c_str(), picStr.length(), clientid);
+				}
+				
+			}
+			else{
+				headStr = "HTTP/1.1 404 OK\r\nServer: Microsoft-IIS/7.5\r\n";
+				headStr += file::getCurrentTimeStr();
+				headStr += "\r\nConnection: Keep-Alive\r\nContent-Type: text/html\r\n";
+				headStr += "Content-Length:0\r\n\r\n";
+				__Serv->PostSend(headStr.c_str(), headStr.length(), clientid);
+			}
+		}
+	}
+}
+</code>
+<p align="center"><img src="Zero/1.jpg"/></p>
+关于这个服务器的效率和好坏这里不探讨，因为我也不是做服务器的，只是一时兴起想要弄个自己的网站所以就简单的看了下http协议，尝试对几个协议进行解析和响应，而它也恰好能够满足当前的需求。
+每一个章节的后面都有当前章节的源码下载，下载源码后可以尝试运行开开效果。
+这里的所有的代码都是在VS2013平台下编译调试的，所以相关的依赖库都在首页可以下载，嗯，对了，Visual Studio不要在这里下载，这里使用的是免费的nat123的域名映射，下载速度很慢很慢，当然代码还会同时更新到github，github的下下载速度比这里快得多，O(∩_∩)O。
+另外如要想要自己编译boost库的话可以参看下面的方法:
+vs2013 x64本机工具命令行 
+cd /d boost的解压目录
+bootstrap.bat
+b2.exe --build-type=complete toolset=msvc-12.0 --stagedir=".\lib\vc12_x64" link=static address-model=64
+address-model=64 如果要生成64位的库才使用否则就不用了，默认是32位
+msvc-12.0 是指定vs的版本，vs2013是msvc-12.0 vs2015是msvc-14.0
+--stagedir 指定生成的库存放位置
+link=static 指定生成动态库还是静态库
+<hr>
+<a href = "Zero/HttpServ.rar" download="HttpServ.rar">下载源码</a>
+<a href = "https://github.com/Mengtianhan/HttpServ" target="_back">Github : https://github.com/Mengtianhan/HttpServ</a>
+
